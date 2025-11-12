@@ -22,7 +22,8 @@ func Test_Login_Endpoints(t *testing.T) {
 					"password": TEST_PASSWORD_PRIMARY,
 				}).
 				Send().
-				ExpectStatus(http.StatusBadRequest)
+				ExpectStatus(tools.ERROR_BODY_INVALID_FIELD.Status).
+				ExpectInteger("code", int64(tools.ERROR_BODY_INVALID_FIELD.Code))
 		})
 
 		t.Run("Invalid Email Address", func(t *testing.T) {
@@ -33,7 +34,8 @@ func Test_Login_Endpoints(t *testing.T) {
 					"password": TEST_PASSWORD_PRIMARY,
 				}).
 				Send().
-				ExpectStatus(http.StatusBadRequest)
+				ExpectStatus(tools.ERROR_BODY_INVALID_FIELD.Status).
+				ExpectInteger("code", int64(tools.ERROR_BODY_INVALID_FIELD.Code))
 		})
 
 		t.Run("Invalid Password", func(t *testing.T) {
@@ -44,7 +46,8 @@ func Test_Login_Endpoints(t *testing.T) {
 					"password": TEST_PASSWORD_INVALID,
 				}).
 				Send().
-				ExpectStatus(http.StatusBadRequest)
+				ExpectStatus(tools.ERROR_BODY_INVALID_FIELD.Status).
+				ExpectInteger("code", int64(tools.ERROR_BODY_INVALID_FIELD.Code))
 		})
 
 		t.Run("Signup - Duplicate Email", func(t *testing.T) {
@@ -55,7 +58,8 @@ func Test_Login_Endpoints(t *testing.T) {
 					"password": TEST_PASSWORD_PRIMARY,
 				}).
 				Send().
-				ExpectStatus(http.StatusConflict)
+				ExpectStatus(tools.ERROR_SIGNUP_DUPLICATE_EMAIL.Status).
+				ExpectInteger("code", int64(tools.ERROR_SIGNUP_DUPLICATE_EMAIL.Code))
 		})
 
 		t.Run("Signup - Duplicate Username", func(t *testing.T) {
@@ -66,7 +70,8 @@ func Test_Login_Endpoints(t *testing.T) {
 					"password": TEST_PASSWORD_PRIMARY,
 				}).
 				Send().
-				ExpectStatus(http.StatusConflict)
+				ExpectStatus(tools.ERROR_SIGNUP_DUPLICATE_USERNAME.Status).
+				ExpectInteger("code", int64(tools.ERROR_SIGNUP_DUPLICATE_USERNAME.Code))
 		})
 
 		t.Run("Signup Normally", func(t *testing.T) {
@@ -233,20 +238,23 @@ func Test_Login_Endpoints(t *testing.T) {
 		t.Run("Logout - No Session", func(t *testing.T) {
 			NewTestRequest(t, "POST", "/auth/logout").
 				Send().
-				ExpectStatus(http.StatusUnauthorized)
+				ExpectStatus(tools.ERROR_GENERIC_UNAUTHORIZED.Status).
+				ExpectInteger("code", int64(tools.ERROR_GENERIC_UNAUTHORIZED.Code))
 		})
 
 		t.Run("Logout - Normally", func(t *testing.T) {
 			NewTestRequest(t, "POST", "/auth/logout").
 				WithCookie(tools.HTTP_COOKIE_NAME, TEST_TOKEN_PRIMARY).
 				Send().
-				ExpectStatus(http.StatusNoContent)
+				ExpectStatus(http.StatusNoContent).
+				ExpectCookie(tools.HTTP_COOKIE_NAME)
 		})
 
 		t.Run("Logout - Revoked Session", func(t *testing.T) {
 			NewTestRequest(t, "POST", "/auth/logout").
 				Send().
-				ExpectStatus(http.StatusUnauthorized)
+				ExpectStatus(tools.ERROR_GENERIC_UNAUTHORIZED.Status).
+				ExpectInteger("code", int64(tools.ERROR_GENERIC_UNAUTHORIZED.Code))
 		})
 	})
 
@@ -299,7 +307,8 @@ func Test_Login_Endpoints(t *testing.T) {
 					"token": TEST_TOKEN_INVALID,
 				}).
 				Send().
-				ExpectStatus(http.StatusBadRequest)
+				ExpectStatus(tools.ERROR_BODY_INVALID_FIELD.Status).
+				ExpectInteger("code", int64(tools.ERROR_BODY_INVALID_FIELD.Code))
 		})
 
 		t.Run("Use Incorrect Token", func(t *testing.T) {
@@ -308,7 +317,8 @@ func Test_Login_Endpoints(t *testing.T) {
 					"token": TEST_TOKEN_SECONDARY,
 				}).
 				Send().
-				ExpectStatus(http.StatusNotFound)
+				ExpectStatus(tools.ERROR_UNKNOWN_TOKEN.Status).
+				ExpectInteger("code", int64(tools.ERROR_UNKNOWN_TOKEN.Code))
 		})
 
 		t.Run("Use Correct Token", func(t *testing.T) {
@@ -336,19 +346,24 @@ func Test_Login_Endpoints(t *testing.T) {
 		t.Run("Use Invalid Token", func(t *testing.T) {
 			NewTestRequest(t, "POST", "/auth/verify-email").
 				WithQuery(map[string]any{"token": TEST_TOKEN_INVALID}).
-				Send().ExpectStatus(http.StatusBadRequest)
+				Send().
+				ExpectStatus(tools.ERROR_BODY_INVALID_FIELD.Status).
+				ExpectInteger("code", int64(tools.ERROR_BODY_INVALID_FIELD.Code))
 		})
 
 		t.Run("Use Incorrect Token", func(t *testing.T) {
 			NewTestRequest(t, "POST", "/auth/verify-email").
 				WithQuery(map[string]any{"token": TEST_TOKEN_SECONDARY}).
-				Send().ExpectStatus(http.StatusNotFound)
+				Send().
+				ExpectStatus(tools.ERROR_UNKNOWN_TOKEN.Status).
+				ExpectInteger("code", int64(tools.ERROR_UNKNOWN_TOKEN.Code))
 		})
 
 		t.Run("Use Correct Token", func(t *testing.T) {
 			NewTestRequest(t, "POST", "/auth/verify-email").
 				WithQuery(map[string]any{"token": TEST_TOKEN_PRIMARY}).
-				Send().ExpectStatus(http.StatusNoContent)
+				Send().
+				ExpectStatus(http.StatusNoContent)
 
 			var stateVerified bool
 			QueryDatabaseRow(t, "SELECT email_verified FROM auth.users WHERE id = $1",
