@@ -51,7 +51,7 @@ func (e *emailProviderSES) Start(stop context.Context, await *sync.WaitGroup) er
 	return nil
 }
 
-func (e *emailProviderSES) Send(toAddress, subject, htmlBody string) error {
+func (e *emailProviderSES) Send(ctx context.Context, toAddress, subject, htmlBody string) error {
 	form := url.Values{}
 	form.Set("ConfigurationSetName", e.ConfigurationSet)
 	form.Set("Action", "SendEmail")
@@ -63,7 +63,7 @@ func (e *emailProviderSES) Send(toAddress, subject, htmlBody string) error {
 
 	// Generate Request
 	url := fmt.Sprintf("https://email.%s.amazonaws.com/", e.Region)
-	req, err := http.NewRequest("POST", url, bytes.NewReader(payload))
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(payload))
 	if err != nil {
 		return err
 	}

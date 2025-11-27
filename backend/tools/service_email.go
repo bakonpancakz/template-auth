@@ -63,7 +63,7 @@ var (
 
 type EmailProvider interface {
 	Start(stop context.Context, await *sync.WaitGroup) error
-	Send(toAddress, subject, html string) error
+	Send(ctx context.Context, toAddress, subject, html string) error
 }
 
 var Email EmailProvider
@@ -126,7 +126,10 @@ func SetupEmailTemplate[L any](filename, subjectLine string) func(emailAddress s
 		}
 
 		// Send Email
-		err := Email.Send(emailAddress, subjectLine, buffer.String())
+		ctx, cancel := NewContext()
+		defer cancel()
+
+		err := Email.Send(ctx, emailAddress, subjectLine, buffer.String())
 		dat := map[string]any{
 			"address":  emailAddress,
 			"template": filename,

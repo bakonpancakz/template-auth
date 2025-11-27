@@ -49,7 +49,7 @@ func (e *emailProviderEmailEngine) Start(stop context.Context, await *sync.WaitG
 	}
 }
 
-func (o *emailProviderEmailEngine) Send(toAddress, subject, html string) error {
+func (o *emailProviderEmailEngine) Send(ctx context.Context, toAddress, subject, html string) error {
 
 	// Generate Envelope
 	var payload []byte
@@ -76,8 +76,6 @@ func (o *emailProviderEmailEngine) Send(toAddress, subject, html string) error {
 	gz.Close()
 
 	// Send Request
-	ctx, cancel := NewContext()
-	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, o.EndpointUrl, &compressed)
 	if err != nil {
 		return err

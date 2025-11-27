@@ -13,6 +13,6 @@ func (e *emailProviderNone) Start(stop context.Context, await *sync.WaitGroup) e
 	return nil
 }
 
-func (o *emailProviderNone) Send(toAddress, subject, html string) error {
+func (o *emailProviderNone) Send(ctx context.Context, toAddress, subject, html string) error {
 	return nil
 }
