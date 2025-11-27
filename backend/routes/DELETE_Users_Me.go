@@ -100,9 +100,20 @@ func DELETE_Users_Me(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Background Tasks
-	// 	Delete Account Images
-	//	Notify Account Owner of Deletion
-	go tools.Storage.Delete(imagePaths...)
+	// Delete Account Images
+	go func(paths []string) {
+		ctx, cancel := tools.NewContext()
+		defer cancel()
+
+		if err := tools.Storage.Delete(ctx, paths...); err != nil {
+			tools.LoggerStorage.Error("Failed to Delete Account Images", map[string]any{
+				"paths": paths,
+				"error": err.Error(),
+			})
+		}
+	}(imagePaths)
+
+	// Notify Account Owner of Deletion
 	go tools.TemplateNotifyUserDeleted(
 		user.EmailAddress,
 		tools.LocalsNotifyUserDeleted{

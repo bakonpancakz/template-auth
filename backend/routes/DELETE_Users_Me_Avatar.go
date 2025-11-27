@@ -42,8 +42,11 @@ func DELETE_Users_Me_Avatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	go func(h string) {
+		ctx, cancel := tools.NewContext()
+		defer cancel()
+
 		paths := tools.ImagePaths(tools.ImageOptionsAvatars, session.UserID, h)
-		if err := tools.Storage.Delete(paths...); err != nil {
+		if err := tools.Storage.Delete(ctx, paths...); err != nil {
 			tools.LoggerStorage.Error("Failed to Delete Avatar Banner", map[string]any{
 				"paths": paths,
 				"error": err.Error(),

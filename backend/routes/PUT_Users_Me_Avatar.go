@@ -47,8 +47,11 @@ func PUT_Users_Me_Avatar(w http.ResponseWriter, r *http.Request) {
 	defer func(id int64, hash string) {
 		if !uploadOK && hash != "" {
 			// Delete any possible leftover image files
+			ctx, cancel := tools.NewContext()
+			defer cancel()
+
 			paths := tools.ImagePaths(options, id, hash)
-			if err := tools.Storage.Delete(paths...); err != nil {
+			if err := tools.Storage.Delete(ctx, paths...); err != nil {
 				tools.LoggerStorage.Error("Failed to delete leftover avatar", map[string]any{
 					"paths": paths,
 					"error": err.Error(),
@@ -84,8 +87,11 @@ func PUT_Users_Me_Avatar(w http.ResponseWriter, r *http.Request) {
 	// Delete previous images (if any)
 	go func(hash *string) {
 		if hash != nil {
+			ctx, cancel := tools.NewContext()
+			defer cancel()
+
 			paths := tools.ImagePaths(options, session.UserID, *hash)
-			if err := tools.Storage.Delete(paths...); err != nil {
+			if err := tools.Storage.Delete(ctx, paths...); err != nil {
 				tools.LoggerStorage.Error("Failed to delete previous avatar", map[string]any{
 					"paths": paths,
 					"error": err.Error(),

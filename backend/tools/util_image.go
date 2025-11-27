@@ -127,6 +127,9 @@ func ImageProcessor(o imageOptions, id int64, d []byte) (string, error) {
 	}
 
 	// Processing and Upload Formats
+	ctx, cancel := NewContext()
+	defer cancel()
+
 	imageHash := GenerateImageHash(d)
 	for _, f := range o.Formats {
 
@@ -157,7 +160,7 @@ func ImageProcessor(o imageOptions, id int64, d []byte) (string, error) {
 		if err := jpeg.Encode(&output, cropped, &jpeg.Options{Quality: 100}); err != nil {
 			return imageHash, err
 		}
-		if err := Storage.Put(path, ImageContentType, output.Bytes()); err != nil {
+		if err := Storage.Put(ctx, path, ImageContentType, output.Bytes()); err != nil {
 			return imageHash, err
 		}
 	}

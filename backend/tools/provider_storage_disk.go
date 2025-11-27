@@ -24,12 +24,12 @@ func (o *storageProviderDisk) Start(stop context.Context, await *sync.WaitGroup)
 	return os.MkdirAll(o.Base, o.Mode)
 }
 
-func (o *storageProviderDisk) Put(key, contentType string, data []byte) error {
+func (o *storageProviderDisk) Put(ctx context.Context, key, contentType string, data []byte) error {
 	full := path.Join(o.Base, path.Clean(key))
 	return os.WriteFile(full, data, o.Mode)
 }
 
-func (o *storageProviderDisk) Get(key string) (io.Reader, error) {
+func (o *storageProviderDisk) Get(ctx context.Context, key string) (io.Reader, error) {
 	full := path.Join(o.Base, path.Clean(key))
 	f, err := os.Open(full)
 	if err != nil {
@@ -41,7 +41,7 @@ func (o *storageProviderDisk) Get(key string) (io.Reader, error) {
 	return f, nil
 }
 
-func (o *storageProviderDisk) Delete(keys ...string) error {
+func (o *storageProviderDisk) Delete(ctx context.Context, keys ...string) error {
 	var errs []string
 	for _, k := range keys {
 		full := path.Join(o.Base, path.Clean(k))

@@ -12,14 +12,14 @@ func (e *storageProviderNone) Start(stop context.Context, await *sync.WaitGroup)
 	return nil
 }
 
-func (o *storageProviderNone) Put(key, contentType string, data []byte) error {
+func (o *storageProviderNone) Put(ctx context.Context, key, contentType string, data []byte) error {
 	return nil
 }
 
-func (o *storageProviderNone) Get(key string) (io.Reader, error) {
+func (o *storageProviderNone) Get(ctx context.Context, key string) (io.Reader, error) {
 	return nil, ErrStorageFileNotFound
 }
 
-func (o *storageProviderNone) Delete(keys ...string) error {
+func (o *storageProviderNone) Delete(ctx context.Context, keys ...string) error {
 	return nil
 }

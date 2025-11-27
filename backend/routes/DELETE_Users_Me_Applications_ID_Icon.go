@@ -46,8 +46,11 @@ func DELETE_Users_Me_Applications_ID_Icon(w http.ResponseWriter, r *http.Request
 		return
 	}
 	go func(h string) {
+		ctx, cancel := tools.NewContext()
+		defer cancel()
+
 		paths := tools.ImagePaths(tools.ImageOptionsIcons, snowflake, h)
-		if err := tools.Storage.Delete(paths...); err != nil {
+		if err := tools.Storage.Delete(ctx, paths...); err != nil {
 			tools.LoggerStorage.Error("Failed to Delete Application Icon", map[string]any{
 				"paths": paths,
 				"error": err.Error(),

@@ -51,8 +51,11 @@ func GET_Images_Category_ID_Hash_Filename(w http.ResponseWriter, r *http.Request
 	}
 
 	// Download File from Bucket
+	ctx, cancel := tools.NewContext()
+	defer cancel()
+
 	key := path.Join(options.Folder, strconv.FormatInt(integer, 10), getHash, getFilename)
-	f, err := tools.Storage.Get(key)
+	f, err := tools.Storage.Get(ctx, key)
 	if err != nil {
 		if errors.Is(err, tools.ErrStorageFileNotFound) {
 			http.Error(w, "Not Found", http.StatusNotFound)

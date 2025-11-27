@@ -11,9 +11,9 @@ import (
 
 type StorageProvider interface {
 	Start(stop context.Context, await *sync.WaitGroup) error
-	Put(key, contentType string, data []byte) error
-	Get(key string) (io.Reader, error)
-	Delete(keys ...string) error
+	Put(ctx context.Context, key, contentType string, data []byte) error
+	Get(ctx context.Context, key string) (io.Reader, error)
+	Delete(ctx context.Context, keys ...string) error
 }
 
 var Storage StorageProvider
