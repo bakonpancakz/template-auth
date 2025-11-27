@@ -85,12 +85,15 @@ func NewRatelimit(o *RatelimitOptions) MiddlewareFunc {
 		keyHash := hex.EncodeToString(KeySHAd[:])
 
 		// Fetch Limit
-		usage, err := Ratelimit.Increment(keyHash, o.Period)
+		ctx, cancel := NewContext()
+		defer cancel()
+
+		usage, err := Ratelimit.Increment(ctx, keyHash, o.Period)
 		if err != nil {
 			SendServerError(w, r, err)
 			return false
 		}
-		ttl, err := Ratelimit.TTL(keyHash)
+		ttl, err := Ratelimit.TTL(ctx, keyHash)
 		if err != nil {
 			SendServerError(w, r, err)
 			return false

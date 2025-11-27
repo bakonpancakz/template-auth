@@ -52,9 +52,7 @@ func (p *ratelimitProviderRedis) Start(stop context.Context, await *sync.WaitGro
 	return nil
 }
 
-func (p *ratelimitProviderRedis) Increment(key string, period time.Duration) (int64, error) {
-	ctx, cancel := NewContext()
-	defer cancel()
+func (p *ratelimitProviderRedis) Increment(ctx context.Context, key string, period time.Duration) (int64, error) {
 
 	// Attempt to Set New Key
 	ok, err := p.Client.SetNX(ctx, key, 1, period).Result()
@@ -70,14 +68,10 @@ func (p *ratelimitProviderRedis) Increment(key string, period time.Duration) (in
 	return p.Client.Incr(ctx, key).Result()
 }
 
-func (p *ratelimitProviderRedis) Decrement(key string) (int64, error) {
-	ctx, cancel := NewContext()
-	defer cancel()
+func (p *ratelimitProviderRedis) Decrement(ctx context.Context, key string) (int64, error) {
 	return p.Client.Decr(ctx, key).Result()
 }
 
-func (p *ratelimitProviderRedis) TTL(key string) (time.Duration, error) {
-	ctx, cancel := NewContext()
-	defer cancel()
+func (p *ratelimitProviderRedis) TTL(ctx context.Context, key string) (time.Duration, error) {
 	return p.Client.PTTL(ctx, key).Result()
 }

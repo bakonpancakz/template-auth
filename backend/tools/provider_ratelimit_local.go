@@ -21,7 +21,7 @@ func (p *ratelimitProviderLocal) Start(stop context.Context, await *sync.WaitGro
 	return nil
 }
 
-func (p *ratelimitProviderLocal) Increment(key string, period time.Duration) (int64, error) {
+func (p *ratelimitProviderLocal) Increment(ctx context.Context, key string, period time.Duration) (int64, error) {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 
@@ -41,7 +41,7 @@ func (p *ratelimitProviderLocal) Increment(key string, period time.Duration) (in
 	return p.usage[key], nil
 }
 
-func (p *ratelimitProviderLocal) Decrement(key string) (int64, error) {
+func (p *ratelimitProviderLocal) Decrement(ctx context.Context, key string) (int64, error) {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 
@@ -61,7 +61,7 @@ func (p *ratelimitProviderLocal) Decrement(key string) (int64, error) {
 	return p.usage[key], nil
 }
 
-func (p *ratelimitProviderLocal) TTL(key string) (time.Duration, error) {
+func (p *ratelimitProviderLocal) TTL(ctx context.Context, key string) (time.Duration, error) {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 

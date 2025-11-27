@@ -13,14 +13,14 @@ func (p *rateLimitProviderNone) Start(stop context.Context, await *sync.WaitGrou
 	return nil
 }
 
-func (p *rateLimitProviderNone) Increment(key string, period time.Duration) (int64, error) {
+func (p *rateLimitProviderNone) Increment(ctx context.Context, key string, period time.Duration) (int64, error) {
 	return 0, nil
 }
 
-func (p *rateLimitProviderNone) Decrement(key string) (int64, error) {
+func (p *rateLimitProviderNone) Decrement(ctx context.Context, key string) (int64, error) {
 	return 0, nil
 }
 
-func (p *rateLimitProviderNone) TTL(key string) (time.Duration, error) {
+func (p *rateLimitProviderNone) TTL(ctx context.Context, key string) (time.Duration, error) {
 	return 0, nil
 }

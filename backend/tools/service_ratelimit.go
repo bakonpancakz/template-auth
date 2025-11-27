@@ -15,9 +15,9 @@ type RatelimitProvider interface {
 	// 	- Increment Existing Key will +1
 
 	Start(stop context.Context, await *sync.WaitGroup) error
-	Increment(key string, period time.Duration) (int64, error)
-	Decrement(key string) (int64, error)
-	TTL(key string) (time.Duration, error)
+	Increment(ctx context.Context, key string, period time.Duration) (int64, error)
+	Decrement(ctx context.Context, key string) (int64, error)
+	TTL(ctx context.Context, key string) (time.Duration, error)
 }
 
 var Ratelimit RatelimitProvider
