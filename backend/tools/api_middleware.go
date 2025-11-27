@@ -190,7 +190,7 @@ func UseSession(w http.ResponseWriter, r *http.Request) bool {
 			return false
 		}
 
-		// Sanity Checks
+		// Additional Validation
 		if time.Now().After(connectionExpires) {
 			SendClientError(w, r, ERROR_ACCESS_EXPIRED)
 			return false
@@ -225,7 +225,7 @@ func UseSession(w http.ResponseWriter, r *http.Request) bool {
 			return false
 		}
 
-		// Sanity Checks
+		// Additional Validation
 		if sessionRevoked {
 			SendClientError(w, r, ERROR_ACCESS_REVOKED)
 			return false

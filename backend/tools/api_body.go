@@ -13,22 +13,26 @@ import (
 
 // Use Built-in Validator against Request Body
 func ValidateBody(w http.ResponseWriter, r *http.Request, b any) bool {
-	verr, err := ValidateStruct(b)
+	structErrors, err := ValidateStruct(b)
 	if err != nil {
 		SendServerError(w, r, err)
 		return false
 	}
-	if len(verr) > 0 {
-		SendFormError(w, r, verr...)
+	if len(structErrors) > 0 {
+		SendJSON(w, r, ERROR_BODY_INVALID_FIELD.Status, map[string]any{
+			"code":    ERROR_BODY_INVALID_FIELD.Code,
+			"message": ERROR_BODY_INVALID_FIELD.Message,
+			"errors":  structErrors,
+		})
 		return false
 	}
 	return true
 }
 
-// Decode and Validate Incoming JSON Request
-func ValidateJSON(w http.ResponseWriter, r *http.Request, b any) bool {
+// Decode Incoming JSON Request
+func BindJSON(w http.ResponseWriter, r *http.Request, b any) bool {
 
-	// Validate Content Type Header
+	// Additional Validation
 	header := strings.ToLower(r.Header.Get("Content-Type"))
 	if !strings.HasPrefix(header, "application/json") {
 		SendClientError(w, r, ERROR_BODY_INVALID_TYPE)
@@ -36,7 +40,7 @@ func ValidateJSON(w http.ResponseWriter, r *http.Request, b any) bool {
 	}
 	defer r.Body.Close()
 
-	// Incoming Decoder
+	// Decode as stream, lower memory usage and earlier returns
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(b); err != nil {
@@ -44,12 +48,19 @@ func ValidateJSON(w http.ResponseWriter, r *http.Request, b any) bool {
 		return false
 	}
 
+	return true
+}
+
+// Decode and Validate Incoming JSON Request
+func ValidateJSON(w http.ResponseWriter, r *http.Request, b any) bool {
+	if !BindJSON(w, r, b) {
+		return false
+	}
 	return ValidateBody(w, r, b)
 }
 
-// Decode and Validate Incoming Query Parameters
-func ValidateQuery(w http.ResponseWriter, r *http.Request, b any) bool {
-
+// Decode Incoming Query Parameters
+func BindQuery(w http.ResponseWriter, r *http.Request, b any) bool {
 	// Read Incoming Field
 	var query url.Values
 	switch r.Method {
@@ -104,26 +115,54 @@ func ValidateQuery(w http.ResponseWriter, r *http.Request, b any) bool {
 		}
 		fieldValue := structValue.Field(i)
 
-		if val := query.Get(fieldTag); val != "" && fieldValue.CanSet() {
-			switch fieldValue.Kind() {
-			case reflect.String:
-				fieldValue.SetString(val)
-			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-				if n, err := strconv.ParseInt(val, 10, 64); err == nil {
-					fieldValue.SetInt(n)
-				}
-			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-				if n, err := strconv.ParseUint(val, 10, 64); err == nil {
-					fieldValue.SetUint(n)
-				}
-			case reflect.Bool:
-				if b, err := strconv.ParseBool(val); err == nil {
-					fieldValue.SetBool(b)
-				}
+		val := query.Get(fieldTag)
+		if val == "" || !fieldValue.CanSet() {
+			continue
+		}
+		target := fieldValue
+		isPtr := false
+
+		if fieldValue.Kind() == reflect.Ptr {
+			isPtr = true
+			elemType := fieldValue.Type().Elem()
+			// allocate new value if nil
+			if fieldValue.IsNil() {
+				fieldValue.Set(reflect.New(elemType))
+			}
+			target = fieldValue.Elem()
+		}
+
+		switch target.Kind() {
+		case reflect.String:
+			target.SetString(val)
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			if n, err := strconv.ParseInt(val, 10, 64); err == nil {
+				target.SetInt(n)
+			}
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			if n, err := strconv.ParseUint(val, 10, 64); err == nil {
+				target.SetUint(n)
+			}
+		case reflect.Bool:
+			if b, err := strconv.ParseBool(val); err == nil {
+				target.SetBool(b)
+			}
+		default:
+			if isPtr {
+				// If pointer to unsupported type, set to nil
+				fieldValue.Set(reflect.Zero(fieldValue.Type()))
 			}
 		}
 	}
 
+	return true
+}
+
+// Decode and Validate Incoming Query Parameters
+func ValidateQuery(w http.ResponseWriter, r *http.Request, b any) bool {
+	if !BindQuery(w, r, b) {
+		return false
+	}
 	return ValidateBody(w, r, b)
 }
 

@@ -63,7 +63,7 @@ var RESET_SESSION_REVOKED = DatabaseResetOption{
 // Create Default Application
 var RESET_APPLICATION = DatabaseResetOption{
 	Query:     `INSERT INTO auth.applications (id, user_id, name, auth_secret) VALUES ($1, $2, $3, $4)`,
-	Arguments: []any{TEST_ID_PRIMARY, TEST_ID_PRIMARY, TEST_DISPLAYNAME_PRIMARY, TEST_TOKEN_PRIMARY},
+	Arguments: []any{TEST_ID_PRIMARY, TEST_ID_PRIMARY, TEST_DISPLAYNAME_PRIMARY, TEST_OAUTH2_SECRET_HASH},
 }
 
 // Personalize Default Application
@@ -74,14 +74,14 @@ var RESET_APPLICATION_CUSTOMIZED = DatabaseResetOption{
 
 // Create Default Connection for Default Application
 var RESET_CONNECTION = DatabaseResetOption{
-	Query:     `INSERT INTO auth.connections (user_id, application_id, scopes,token_access, token_expires, token_refresh) VALUES ($1, $2, $3, $4, $5, $6)`,
-	Arguments: []any{},
+	Query:     `INSERT INTO auth.connections (id, user_id, application_id, scopes, token_access, token_expires, token_refresh) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+	Arguments: []any{TEST_ID_PRIMARY, TEST_ID_PRIMARY, TEST_ID_PRIMARY, TEST_OAUTH2_SCOPE_INTEGER, TEST_TOKEN_PRIMARY, TEST_TOKEN_EXPIRES_FUTURE, TEST_TOKEN_SECONDARY},
 }
 
 // Create Default Grant for Default Application
 var RESET_GRANT = DatabaseResetOption{
-	Query:     `INSERT INTO auth.grants (id, expires, user_id, application_id,redirect_uri, scopes, code) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-	Arguments: []any{TEST_ID_PRIMARY, TEST_TOKEN_EXPIRES_FUTURE, TEST_ID_PRIMARY, TEST_ID_PRIMARY, TEST_REDIRECT_URI_PRIMARY, 0, TEST_TOKEN_PRIMARY},
+	Query:     `INSERT INTO auth.grants (id, expires, user_id, application_id, redirect_uri, scopes, code) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+	Arguments: []any{TEST_ID_PRIMARY, TEST_TOKEN_EXPIRES_FUTURE, TEST_ID_PRIMARY, TEST_ID_PRIMARY, TEST_REDIRECT_URI_PRIMARY, TEST_OAUTH2_SCOPE_INTEGER, TEST_TOKEN_PRIMARY},
 }
 
 // With OAuth2 Scope 'identify'

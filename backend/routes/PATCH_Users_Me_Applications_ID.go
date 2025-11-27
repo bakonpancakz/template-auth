@@ -2,10 +2,7 @@ package routes
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
-	"net/url"
-	"strconv"
 
 	"github.com/bakonpancakz/template-auth/tools"
 
@@ -16,22 +13,20 @@ func PATCH_Users_Me_Applications_ID(w http.ResponseWriter, r *http.Request) {
 
 	session := tools.GetSession(r)
 	if session.ApplicationID != tools.SESSION_NO_APPLICATION_ID {
-		tools.SendClientError(w, r, tools.ERROR_OAUTH2_USERS_ONLY)
+		tools.SendClientError(w, r, tools.ERROR_GENERIC_USERS_ONLY)
 		return
 	}
 
 	var Body struct {
 		Name        *string   `json:"name" validate:"omitempty,displayname"`
 		Description *string   `json:"description" validate:"omitempty,description"`
-		Redirects   *[]string `json:"redirects"`
+		Redirects   *[]string `json:"redirects" validate:"omitempty,max=100"`
 	}
 	if !tools.ValidateJSON(w, r, &Body) {
 		return
 	}
-
-	snowflake, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
-	if err != nil {
-		tools.SendClientError(w, r, tools.ERROR_UNKNOWN_APPLICATION)
+	ok, snowflake := tools.GetSnowflake(w, r)
+	if !ok {
 		return
 	}
 	ctx, cancel := tools.NewContext()
@@ -39,7 +34,7 @@ func PATCH_Users_Me_Applications_ID(w http.ResponseWriter, r *http.Request) {
 
 	// Fetch Relevant Application
 	var application tools.DatabaseApplication
-	err = tools.Database.QueryRow(ctx,
+	err := tools.Database.QueryRow(ctx,
 		`SELECT
 			id, created, name, description, icon_hash, redirects
 		FROM auth.applications
@@ -79,45 +74,29 @@ func PATCH_Users_Me_Applications_ID(w http.ResponseWriter, r *http.Request) {
 	}
 	if Body.Redirects != nil {
 
-		// Limit Amount of Redirect URIs
-		if len(*Body.Redirects) > tools.REDIRECT_URI_SLICE_LEN_MAX {
-			tools.SendFormError(w, r, tools.ValidationError{
-				Field:    "redirects",
-				Error:    tools.VALIDATOR_SLICE_TOO_MANY_ITEMS,
-				Literals: []any{tools.REDIRECT_URI_SLICE_LEN_MAX},
-			})
-			return
+		// Premature optimization rabbit hole, but this was cool :)
+		// 	https://udaykishoreresu.medium.com/gos-zero-byte-secret-why-struct-outperforms-bool-for-scalable-deduplication-4de84cc8c712
+		seen := make(map[string]struct{}, len(*Body.Redirects))
+		redirects := make([]string, 0, len(*Body.Redirects))
+
+		for _, str := range *Body.Redirects {
+
+			// Canonicalize String
+			canonical, err := tools.OAuth2RedirectCanonicalize(str)
+			if err != nil {
+				tools.SendClientError(w, r, tools.ERROR_BODY_INVALID_FIELD)
+				return
+			}
+
+			// Ignore Duplicates
+			if _, exists := seen[canonical]; exists {
+				continue
+			}
+			seen[canonical] = struct{}{}
+			redirects = append(redirects, canonical)
 		}
 
-		// Validate and Normalize the Srings
-		normalized := make([]string, 0, len(*Body.Redirects))
-		for i, uri := range *Body.Redirects {
-			parsed, err := url.Parse(uri)
-			if err != nil {
-				tools.SendFormError(w, r, tools.ValidationError{
-					Field: fmt.Sprintf("redirects[%d]", i),
-					Error: tools.VALIDATOR_URI_INVALID,
-				})
-				return
-			}
-			if len(uri) > tools.REDIRECT_URI_STRING_LEN_MAX {
-				tools.SendFormError(w, r, tools.ValidationError{
-					Field:    fmt.Sprintf("redirects[%d]", i),
-					Error:    tools.VALIDATOR_STRING_TOO_LONG,
-					Literals: []any{tools.REDIRECT_URI_STRING_LEN_MAX},
-				})
-				return
-			}
-			if parsed.Scheme != "https" && parsed.Scheme != "http" {
-				tools.SendFormError(w, r, tools.ValidationError{
-					Field: fmt.Sprintf("redirects[%d]", i),
-					Error: tools.VALIDATOR_URI_INVALID_SCHEME,
-				})
-				return
-			}
-			normalized = append(normalized, fmt.Sprintf("%s://%s%s", parsed.Scheme, parsed.Host, parsed.Path))
-		}
-		application.AuthRedirects = normalized
+		application.AuthRedirects = redirects
 		edited = true
 	}
 

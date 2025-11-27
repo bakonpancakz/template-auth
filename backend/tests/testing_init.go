@@ -42,4 +42,9 @@ func init() {
 	syncWg.Wait()
 	HTTP_SERVER = httptest.NewServer(core.SetupMux())
 	HTTP_CLIENT = HTTP_SERVER.Client()
+	HTTP_CLIENT.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		// Prevent Client from Accessing Internet on some Endpoints
+		return http.ErrUseLastResponse
+	}
+
 }

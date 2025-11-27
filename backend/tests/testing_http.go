@@ -3,11 +3,13 @@ package tests
 import (
 	"bytes"
 	"compress/gzip"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -42,6 +44,7 @@ func (t *testRequest) WithHeader(key, value string) *testRequest {
 	return t
 }
 
+// Add Cookie to Request
 func (t *testRequest) WithCookie(name, value string) *testRequest {
 	cookies := ""
 	if c, ok := t.requestHeaders["Cookie"]; ok {
@@ -59,6 +62,14 @@ func (t *testRequest) WithJSON(body map[string]any) *testRequest {
 		t.test.Fatalf("json marshal error: %s", err)
 	}
 	t.requestBody = bytes.NewReader(b)
+	return t
+}
+
+// Include Basic Authentication with your Request
+func (t *testRequest) WithBasicAuth(username, password string) *testRequest {
+	credentials := fmt.Sprintf("%s:%s", username, password)
+	encoded := base64.URLEncoding.EncodeToString([]byte(credentials))
+	t.requestHeaders["Authorization"] = fmt.Sprintf("Basic %s", encoded)
 	return t
 }
 
@@ -165,7 +176,7 @@ func (t *testRequest) ExpectCookie(name string) *testRequest {
 		}
 	}
 	if !found {
-		t.test.Fatalf("expected cookie '%s' to be present", name)
+		t.test.Fatalf("expected cookie '%s' to be present\nHeaders: %s", name, t.response.Header)
 	}
 	return t
 }
@@ -173,8 +184,12 @@ func (t *testRequest) ExpectCookie(name string) *testRequest {
 // Expect a JSON field to be present
 func (t *testRequest) ExpectField(key string) *testRequest {
 	t.ExpectJSON()
-	if _, ok := t.responseJSON[key]; !ok {
+	v, ok := t.responseJSON[key]
+	if !ok {
 		t.test.Fatalf("expected field '%s' to be present", key)
+	}
+	if reflect.ValueOf(v).IsZero() {
+		t.test.Fatalf("expected field '%s' to be non-zero", key)
 	}
 	return t
 }

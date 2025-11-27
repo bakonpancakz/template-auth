@@ -1,65 +1,41 @@
 package routes
 
 import (
-	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/bakonpancakz/template-auth/tools"
-
-	"github.com/jackc/pgx/v5"
 )
+
+// Respond with '200 OK' status code even if invalid per standard
+// https://datatracker.ietf.org/doc/html/rfc7009#section-2.2
 
 func POST_OAuth2_Token_Revoke(w http.ResponseWriter, r *http.Request) {
 
-	var clientID int64
-	var clientSecret string
-	if user, pass, ok := r.BasicAuth(); !ok {
-		tools.SendClientError(w, r, tools.ERROR_GENERIC_UNAUTHORIZED)
-		return
-	} else if id, err := strconv.ParseInt(user, 10, 64); err != nil {
-		tools.SendClientError(w, r, tools.ERROR_UNKNOWN_APPLICATION)
-		return
-	} else {
-		clientID = id
-		clientSecret = pass
-	}
-
 	var Body struct {
-		Token string `query:"token" validate:"required,token"`
+		// Not used, but this field is parsed anyways to prevent a possible
+		// 'disallowed field' validation error from happening in the future
+		// as some OAuth2 Libraries may include it.
+		TokenTypeHint string `query:"token_type_hint"`
+		Token         string `query:"token"`
 	}
-	if !tools.ValidateQuery(w, r, &Body) {
+	if !tools.BindQuery(w, r, &Body) {
 		return
 	}
-	ctx, cancel := tools.NewContext()
-	defer cancel()
+	if !tools.CompareSignedString(Body.Token) {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
 
 	// Validate Application Secret
-	var application tools.DatabaseApplication
-	err := tools.Database.QueryRow(ctx,
-		"SELECT id, auth_secret FROM auth.applications WHERE id = $1",
-		clientID,
-	).Scan(
-		&application.ID,
-		&application.AuthSecret,
-	)
-	if errors.Is(err, pgx.ErrNoRows) {
-		tools.SendClientError(w, r, tools.ERROR_UNKNOWN_APPLICATION)
-		return
-	}
-	if err != nil {
-		tools.SendServerError(w, r, err)
-		return
-	}
-
-	// Compare Application Secret
-	if !tools.CompareApplicationSecret(clientSecret, application.AuthSecret) {
-		tools.SendClientError(w, r, tools.ERROR_GENERIC_UNAUTHORIZED)
+	ctx, cancel := tools.NewContext()
+	defer cancel()
+	ok, applicationID := tools.OAuth2ValidateRequestAuth(ctx, w, r)
+	if !ok {
 		return
 	}
 
 	// Mark Relevant Connection as Revoked
-	tag, err := tools.Database.Exec(ctx,
+	_, err := tools.Database.Exec(ctx,
 		`UPDATE auth.connections SET
 			updated = CURRENT_TIMESTAMP,
 			revoked = TRUE,
@@ -68,16 +44,12 @@ func POST_OAuth2_Token_Revoke(w http.ResponseWriter, r *http.Request) {
 		AND application_id = $2
 		AND revoked = false`,
 		Body.Token,
-		application.ID,
+		applicationID,
 	)
 	if err != nil {
 		tools.SendServerError(w, r, err)
 		return
 	}
-	if tag.RowsAffected() == 0 {
-		tools.SendClientError(w, r, tools.ERROR_UNKNOWN_CONNECTION)
-		return
-	}
 
-	w.WriteHeader(http.StatusNoContent)
+	w.WriteHeader(http.StatusOK)
 }

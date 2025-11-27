@@ -2,7 +2,6 @@ package routes
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/bakonpancakz/template-auth/tools"
 )
@@ -11,17 +10,15 @@ func DELETE_Users_Me_Connections_ID(w http.ResponseWriter, r *http.Request) {
 
 	session := tools.GetSession(r)
 	if session.ApplicationID != tools.SESSION_NO_APPLICATION_ID {
-		tools.SendClientError(w, r, tools.ERROR_OAUTH2_USERS_ONLY)
+		tools.SendClientError(w, r, tools.ERROR_GENERIC_USERS_ONLY)
 		return
 	}
 	if !session.Elevated {
 		tools.SendClientError(w, r, tools.ERROR_MFA_ESCALATION_REQUIRED)
 		return
 	}
-
-	snowflake, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
-	if err != nil {
-		tools.SendClientError(w, r, tools.ERROR_UNKNOWN_CONNECTION)
+	ok, snowflake := tools.GetSnowflake(w, r)
+	if !ok {
 		return
 	}
 	ctx, cancel := tools.NewContext()

@@ -120,6 +120,7 @@ BEGIN
             token_access        TEXT            UNIQUE,                                     -- Connection Access Token
             token_expires       TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,         -- Connection Access Token Expires At
             token_refresh       TEXT            UNIQUE,                                     -- Connection Refresh Token
+            CONSTRAINT unique_connections UNIQUE (user_id, application_id),
             FOREIGN KEY (user_id)        REFERENCES auth.users(id)        ON DELETE CASCADE,
             FOREIGN KEY (application_id) REFERENCES auth.applications(id) ON DELETE CASCADE
         );

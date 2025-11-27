@@ -13,7 +13,7 @@ func PATCH_Users_Me(w http.ResponseWriter, r *http.Request) {
 
 	session := tools.GetSession(r)
 	if session.ApplicationID != tools.SESSION_NO_APPLICATION_ID {
-		tools.SendClientError(w, r, tools.ERROR_OAUTH2_USERS_ONLY)
+		tools.SendClientError(w, r, tools.ERROR_GENERIC_USERS_ONLY)
 		return
 	}
 

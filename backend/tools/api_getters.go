@@ -3,10 +3,11 @@ package tools
 import (
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
-// Fetch Session from Request Context
+// Fetch Session from Request Context.
 // Expects UseSession to be present in the http handler chain otherwise it panics
 func GetSession(r *http.Request) *SessionData {
 	v := r.Context().Value(SESSION_KEY)
@@ -14,6 +15,28 @@ func GetSession(r *http.Request) *SessionData {
 		panic("missing session in request context; this request should have returned earlier")
 	}
 	return v.(*SessionData)
+}
+
+// Get Snowflake from Request Path.
+// Expects id to be present in http handler (e.g. '/path/to/item/{id}')
+func GetSnowflake(w http.ResponseWriter, r *http.Request) (bool, int64) {
+	v, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		sendFormError(w, r, ValidationError{
+			Field: "id",
+			Error: VALIDATOR_STRING_NOT_A_NUMBER,
+		})
+		return false, 0
+	}
+	if v < 1 {
+		sendFormError(w, r, ValidationError{
+			Field:    "id",
+			Error:    VALIDATOR_INTEGER_TOO_SMALL,
+			Literals: []any{1},
+		})
+		return false, 0
+	}
+	return true, v
 }
 
 // Get IP Address of Incoming Client
@@ -48,8 +71,6 @@ func GetRemoteIP(r *http.Request) string {
 	// Proxy is misconfigured, use fallback!
 	return clientIP.String()
 }
-
-// proxy helper :p
 
 func isTrustedProxy(ip net.IP) bool {
 	for _, cidr := range HTTP_IP_PROXIES {

@@ -3,7 +3,6 @@ package routes
 import (
 	"errors"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/bakonpancakz/template-auth/tools"
@@ -11,178 +10,106 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-const (
-	GRANT_CODE    = "authorization_code"
-	GRANT_REFRESH = "refresh_token"
-)
-
 func POST_OAuth2_Token(w http.ResponseWriter, r *http.Request) {
 
-	var clientID int64
-	var clientSecret string
-	if user, pass, ok := r.BasicAuth(); !ok {
-		tools.SendClientError(w, r, tools.ERROR_GENERIC_UNAUTHORIZED)
-		return
-	} else if id, err := strconv.ParseInt(user, 10, 64); err != nil {
-		tools.SendClientError(w, r, tools.ERROR_UNKNOWN_APPLICATION)
-		return
-	} else {
-		clientID = id
-		clientSecret = pass
-	}
-
 	var Body struct {
-		GrantType    string `query:"grant_type" validate:"required"`
-		RedirectURI  string `query:"redirect_uri"`
-		Code         string `query:"code"`
-		RefreshToken string `query:"refresh_token"`
+		GrantType    string `query:"grant_type"`    // Required
+		RedirectURI  string `query:"redirect_uri"`  // Used in Grant Code
+		Code         string `query:"code"`          // Used in Grant Code
+		RefreshToken string `query:"refresh_token"` // Used in Grant Refresh
 	}
-	if !tools.ValidateQuery(w, r, &Body) {
+	if !tools.BindQuery(w, r, &Body) {
 		return
 	}
-	ctx, cancel := tools.NewContext()
-	defer cancel()
 
 	// Validate Parameters
 	switch Body.GrantType {
-	case GRANT_CODE:
-		if Body.RedirectURI == "" {
-			tools.SendClientError(w, r, tools.ERROR_OAUTH2_FORM_INVALID_REDIRECT_URI)
-			return
-		}
+	case tools.GRANT_CODE:
 		if !tools.CompareSignedString(Body.Code) {
-			tools.SendClientError(w, r, tools.ERROR_OAUTH2_FORM_INVALID_CODE)
+			tools.SendOAuth2Error(w, r, tools.INVALID_REQUEST, tools.CODE_INVALID)
 			return
 		}
-	case GRANT_REFRESH:
+		ok, standard := tools.OAuth2ValidateRedirectURI(w, r, Body.RedirectURI)
+		if !ok {
+			return
+		}
+		Body.RedirectURI = standard
+	case tools.GRANT_REFRESH:
 		if !tools.CompareSignedString(Body.RefreshToken) {
-			tools.SendClientError(w, r, tools.ERROR_OAUTH2_FORM_INVALID_REFRESH_TOKEN)
+			tools.SendOAuth2Error(w, r, tools.INVALID_GRANT, tools.REFRESH_TOKEN_UNKNOWN)
 			return
 		}
+	default:
+		tools.SendOAuth2Error(w, r, tools.UNSUPPORTED_GRANT_TYPE, tools.GRANT_TYPE_UNSUPPORTED)
+		return
 	}
 
 	// Validate Application Secret
-	var application tools.DatabaseApplication
-	err := tools.Database.QueryRow(ctx,
-		`SELECT
-			id, auth_secret
-		FROM auth.applications
-		WHERE id = $1`,
-		clientID,
-	).Scan(
-		&application.ID,
-		&application.AuthSecret,
-	)
-	if errors.Is(err, pgx.ErrNoRows) {
-		tools.SendClientError(w, r, tools.ERROR_UNKNOWN_APPLICATION)
-		return
-	}
-	if err != nil {
-		tools.SendServerError(w, r, err)
-		return
-	}
-	if !tools.CompareApplicationSecret(clientSecret, application.AuthSecret) {
-		tools.SendClientError(w, r, tools.ERROR_GENERIC_UNAUTHORIZED)
+	ctx, cancel := tools.NewContext()
+	defer cancel()
+	ok, applicationID := tools.OAuth2ValidateRequestAuth(ctx, w, r)
+	if !ok {
 		return
 	}
 
 	// Complete Grant Request
 	switch Body.GrantType {
-	case GRANT_CODE:
 
-		// Consume Auth Grant
+	// Consume Auth Grant
+	case tools.GRANT_CODE:
 		var grant tools.DatabaseGrant
 		err := tools.Database.QueryRow(ctx,
 			`DELETE FROM auth.grants
-			WHERE code = $1 AND expires > NOW()
-			RETURNING user_id, application_id, redirect_uri, scopes`,
+			WHERE code = $1
+			AND application_id = $2
+			AND redirect_uri = $3
+			AND expires > NOW()
+			RETURNING user_id, application_id, scopes`,
 			Body.Code,
+			applicationID,
+			Body.RedirectURI,
 		).Scan(
 			&grant.UserID,
 			&grant.ApplicationID,
-			&grant.RedirectURI,
 			&grant.Scopes,
 		)
 		if errors.Is(err, pgx.ErrNoRows) {
-			tools.SendClientError(w, r, tools.ERROR_UNKNOWN_APPLICATION)
+			tools.SendOAuth2Error(w, r, tools.INVALID_GRANT, tools.GRANT_UNKNOWN)
 			return
 		}
 		if err != nil {
 			tools.SendServerError(w, r, err)
 			return
 		}
-		if grant.ApplicationID != clientID ||
-			grant.RedirectURI != Body.RedirectURI {
-			tools.SendClientError(w, r, tools.ERROR_GENERIC_UNAUTHORIZED)
-			return
-		}
 
-		// Fetch Relevant Connection
-		var tokenAccess, tokenRefresh string
-		var connection tools.DatabaseConnection
-		err = tools.Database.QueryRow(ctx,
-			`SELECT
-				token_expires
-			FROM auth.connections
-			WHERE application_id = $1
-			AND user_id = $2`,
-			grant.ApplicationID,
+		// Update or Create New Connection
+		var tokenAccess = tools.GenerateSignedString()
+		var tokenRefresh = tools.GenerateSignedString()
+		var tokenExpires = time.Now().Add(tools.LIFETIME_OAUTH2_ACCESS_TOKEN)
+		_, err = tools.Database.Exec(ctx, `
+			INSERT INTO auth.connections (
+				id, user_id, application_id, scopes, token_access,
+				token_expires, token_refresh
+			)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)
+			ON CONFLICT (user_id, application_id)
+			DO UPDATE SET
+				updated       = CURRENT_TIMESTAMP,
+				revoked       = FALSE,
+				scopes        = $4,
+				token_access  = $5,
+				token_refresh = $7,
+				token_expires = $6;
+			`,
+			tools.GenerateSnowflake(),
 			grant.UserID,
-		).Scan(&connection.TokenExpires)
-
-		switch {
-		// Create New Connection
-		case errors.Is(err, pgx.ErrNoRows):
-			tokenAccess = tools.GenerateSignedString()
-			tokenRefresh = tools.GenerateSignedString()
-			_, err := tools.Database.Exec(ctx,
-				`INSERT INTO auth.connections (
-					id, user_id, application_id, scopes, token_access,
-					token_expires, token_refresh
-				) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-				tools.GenerateSnowflake(),
-				grant.UserID,
-				grant.ApplicationID,
-				grant.Scopes,
-				tokenAccess,
-				time.Now().Add(tools.LIFETIME_OAUTH2_ACCESS_TOKEN),
-				tokenRefresh,
-			)
-			if err != nil {
-				tools.SendServerError(w, r, err)
-				return
-			}
-
-		// Reset Existing Connection
-		case err == nil:
-			tag, err := tools.Database.Exec(ctx,
-				`UPDATE auth.connections SET
-					updated			= CURRENT_TIMESTAMP,
-					revoked 		= FALSE,
-					scopes  		= $1,
-					token_access 	= $2,
-					token_refresh   = $3,
-					token_expires	= $4
-				WHERE user_id = $5
-				AND application_id = $6`,
-				grant.Scopes,
-				tokenAccess,
-				tokenRefresh,
-				time.Now().Add(tools.LIFETIME_OAUTH2_ACCESS_TOKEN),
-				grant.UserID,
-				grant.ApplicationID,
-			)
-			if err != nil {
-				tools.SendServerError(w, r, err)
-				return
-			}
-			if tag.RowsAffected() == 0 {
-				tools.SendClientError(w, r, tools.ERROR_UNKNOWN_CONNECTION)
-				return
-			}
-
-		// Unknown Error
-		default:
+			grant.ApplicationID,
+			grant.Scopes,
+			tokenAccess,
+			tokenExpires,
+			tokenRefresh,
+		)
+		if err != nil {
 			tools.SendServerError(w, r, err)
 			return
 		}
@@ -192,44 +119,40 @@ func POST_OAuth2_Token(w http.ResponseWriter, r *http.Request) {
 			"token_type":    tools.TOKEN_PREFIX_BEARER,
 			"access_token":  tokenAccess,
 			"refresh_token": tokenRefresh,
-			"expires_in":    tools.LIFETIME_OAUTH2_ACCESS_TOKEN.Seconds(),
+			"expires_in":    int(tools.LIFETIME_OAUTH2_ACCESS_TOKEN.Seconds()),
 			"scopes":        tools.OAuth2ScopesToString(grant.Scopes),
 		})
 		return
 
-	case GRANT_REFRESH:
-		// Search for Relevant Connection
+	// Search for Relevant Connection
+	case tools.GRANT_REFRESH:
 		var connection tools.DatabaseConnection
-		err = tools.Database.QueryRow(ctx,
+		err := tools.Database.QueryRow(ctx,
 			`SELECT
-				id, revoked, scopes
+				id, scopes
 			FROM auth.connections
 			WHERE token_refresh = $1
-			AND application_id 	= $2`,
+			AND application_id 	= $2
+			AND revoked = FALSE`,
 			Body.RefreshToken,
-			application.ID,
+			applicationID,
 		).Scan(
 			&connection.ID,
 			&connection.Scopes,
-			&connection.Revoked,
 		)
 		if errors.Is(err, pgx.ErrNoRows) {
-			tools.SendClientError(w, r, tools.ERROR_GENERIC_UNAUTHORIZED)
+			tools.SendOAuth2Error(w, r, tools.INVALID_GRANT, tools.REFRESH_TOKEN_UNKNOWN)
 			return
 		}
 		if err != nil {
 			tools.SendServerError(w, r, err)
 			return
 		}
-		if connection.Revoked {
-			tools.SendClientError(w, r, tools.ERROR_ACCESS_REVOKED)
-			return
-		}
 
 		// Update Connection Tokens
 		var tokenAccess = tools.GenerateSignedString()
 		var tokenRefresh = tools.GenerateSignedString()
-		tag, err := tools.Database.Exec(ctx,
+		_, err = tools.Database.Exec(ctx,
 			`UPDATE auth.connections SET
 				updated 	  = CURRENT_TIMESTAMP,
 				token_access  = $1,
@@ -245,23 +168,15 @@ func POST_OAuth2_Token(w http.ResponseWriter, r *http.Request) {
 			tools.SendServerError(w, r, err)
 			return
 		}
-		if tag.RowsAffected() == 0 {
-			tools.SendClientError(w, r, tools.ERROR_UNKNOWN_CONNECTION)
-			return
-		}
 
 		// Organize Connection
 		tools.SendJSON(w, r, http.StatusOK, map[string]any{
 			"token_type":    tools.TOKEN_PREFIX_BEARER,
 			"access_token":  tokenAccess,
 			"refresh_token": tokenRefresh,
-			"expires_in":    tools.LIFETIME_OAUTH2_ACCESS_TOKEN.Seconds(),
+			"expires_in":    int(tools.LIFETIME_OAUTH2_ACCESS_TOKEN.Seconds()),
 			"scopes":        tools.OAuth2ScopesToString(connection.Scopes),
 		})
 		return
-
-	// Unknown Grant Type
-	default:
-		tools.SendClientError(w, r, tools.ERROR_OAUTH2_FORM_INVALID_GRANT_TYPE)
 	}
 }

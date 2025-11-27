@@ -13,7 +13,7 @@ func GET_Users_Me(w http.ResponseWriter, r *http.Request) {
 
 	session := tools.GetSession(r)
 	if !tools.OAuth2ScopesContains(session, tools.SCOPE_READ_IDENTIFY) {
-		tools.SendClientError(w, r, tools.ERROR_OAUTH2_SCOPE_REQUIRED)
+		tools.SendClientError(w, r, tools.ERROR_GENERIC_SCOPE_REQUIRED)
 		return
 	}
 	ctx, cancel := tools.NewContext()

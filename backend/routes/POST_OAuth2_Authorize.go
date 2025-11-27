@@ -16,34 +16,42 @@ func POST_OAuth2_Authorize(w http.ResponseWriter, r *http.Request) {
 
 	session := tools.GetSession(r)
 	if session.ApplicationID != tools.SESSION_NO_APPLICATION_ID {
-		tools.SendClientError(w, r, tools.ERROR_OAUTH2_USERS_ONLY)
+		tools.SendClientError(w, r, tools.ERROR_GENERIC_USERS_ONLY)
 		return
 	}
 	var Body struct {
 		State        *string `query:"state"`
-		ClientID     int64   `query:"client_id" validate:"required"`
-		ResponseType string  `query:"response_type" validate:"required"`
-		RedirectURI  string  `query:"redirect_uri" validate:"required,uri"`
-		ScopesString string  `query:"scope" validate:"required"`
+		ClientID     int64   `query:"client_id"`
+		ResponseType string  `query:"response_type"`
+		RedirectURI  string  `query:"redirect_uri"`
+		ScopesString string  `query:"scope"`
 	}
-	if !tools.ValidateQuery(w, r, &Body) {
+	if !tools.BindQuery(w, r, &Body) {
+		return
+	}
+
+	// Additional Validation
+	if Body.ClientID < 1 {
+		tools.SendOAuth2Error(w, r, tools.INVALID_REQUEST, tools.CLIENT_ID_INVALID)
 		return
 	}
 	if Body.ResponseType != "code" {
-		tools.SendClientError(w, r, tools.ERROR_OAUTH2_FORM_INVALID_RESPONSE_TYPE)
+		tools.SendOAuth2Error(w, r, tools.UNSUPPORTED_RESPONSE_TYPE, tools.RESPONSE_TYPE_EXPECT_CODE)
+		return
+	}
+	ok, requestedScopes := tools.OAuth2ValidateRequestScopes(w, r, Body.ScopesString)
+	if !ok {
+		return
+	}
+	ok, Body.RedirectURI = tools.OAuth2ValidateRedirectURI(w, r, Body.RedirectURI)
+	if !ok {
 		return
 	}
 
-	// Parse Scopes
-	ok, requestedScopes := tools.OAuth2StringToScopes(Body.ScopesString)
-	if !ok {
-		tools.SendClientError(w, r, tools.ERROR_OAUTH2_FORM_INVALID_SCOPE)
-		return
-	}
+	// Fetch State for Requested Application
 	ctx, cancel := tools.NewContext()
 	defer cancel()
 
-	// Fetch State for Requested Application
 	var application tools.DatabaseApplication
 	err := tools.Database.QueryRow(ctx,
 		"SELECT id, auth_redirects FROM auth.applications WHERE id = $1",
@@ -53,7 +61,7 @@ func POST_OAuth2_Authorize(w http.ResponseWriter, r *http.Request) {
 		&application.AuthRedirects,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
-		tools.SendClientError(w, r, tools.ERROR_UNKNOWN_APPLICATION)
+		tools.SendOAuth2Error(w, r, tools.INVALID_CLIENT, tools.UNKNOWN_APPLICATION)
 		return
 	}
 	if err != nil {
@@ -61,10 +69,10 @@ func POST_OAuth2_Authorize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Ensure Redirect URI is allowed
-	ok, requestedRedirect := tools.OAauth2ScopesValidateRedirectURI(Body.RedirectURI, application.AuthRedirects)
-	if !ok {
-		tools.SendClientError(w, r, tools.ERROR_OAUTH2_FORM_INVALID_REDIRECT_URI)
+	// Validate Requested URI
+	requestedRedirect, err := tools.OAuth2RedirectCompare(Body.RedirectURI, application.AuthRedirects)
+	if err != nil {
+		tools.SendOAuth2Error(w, r, tools.INVALID_REQUEST, tools.REDIRECT_DISALLOWED)
 		return
 	}
 

@@ -3,7 +3,6 @@ package routes
 import (
 	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/bakonpancakz/template-auth/tools"
 	"github.com/jackc/pgx/v5"
@@ -13,13 +12,11 @@ func DELETE_Users_Me_Applications_ID_Icon(w http.ResponseWriter, r *http.Request
 
 	session := tools.GetSession(r)
 	if session.ApplicationID != tools.SESSION_NO_APPLICATION_ID {
-		tools.SendClientError(w, r, tools.ERROR_OAUTH2_USERS_ONLY)
+		tools.SendClientError(w, r, tools.ERROR_GENERIC_USERS_ONLY)
 		return
 	}
-
-	snowflake, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
-	if err != nil {
-		tools.SendClientError(w, r, tools.ERROR_UNKNOWN_CONNECTION)
+	ok, snowflake := tools.GetSnowflake(w, r)
+	if !ok {
 		return
 	}
 	ctx, cancel := tools.NewContext()
@@ -27,7 +24,7 @@ func DELETE_Users_Me_Applications_ID_Icon(w http.ResponseWriter, r *http.Request
 
 	// Remove Image from Application
 	var hash *string
-	err = tools.Database.QueryRow(ctx,
+	err := tools.Database.QueryRow(ctx,
 		`UPDATE auth.applications SET
 			icon_hash = NULL
 		WHERE id = $1 AND user_id = $2
