@@ -16,7 +16,7 @@ func (o *storageProviderNone) Put(ctx context.Context, key, contentType string, 
 	return nil
 }
 
-func (o *storageProviderNone) Get(ctx context.Context, key string) (io.Reader, error) {
+func (o *storageProviderNone) Get(ctx context.Context, key string) (io.ReadCloser, error) {
 	return nil, ErrStorageFileNotFound
 }
 

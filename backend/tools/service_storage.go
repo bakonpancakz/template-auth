@@ -12,7 +12,7 @@ import (
 type StorageProvider interface {
 	Start(stop context.Context, await *sync.WaitGroup) error
 	Put(ctx context.Context, key, contentType string, data []byte) error
-	Get(ctx context.Context, key string) (io.Reader, error)
+	Get(ctx context.Context, key string) (io.ReadCloser, error)
 	Delete(ctx context.Context, keys ...string) error
 }
 

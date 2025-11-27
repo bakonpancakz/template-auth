@@ -29,7 +29,7 @@ func (o *storageProviderDisk) Put(ctx context.Context, key, contentType string, 
 	return os.WriteFile(full, data, o.Mode)
 }
 
-func (o *storageProviderDisk) Get(ctx context.Context, key string) (io.Reader, error) {
+func (o *storageProviderDisk) Get(ctx context.Context, key string) (io.ReadCloser, error) {
 	full := path.Join(o.Base, path.Clean(key))
 	f, err := os.Open(full)
 	if err != nil {

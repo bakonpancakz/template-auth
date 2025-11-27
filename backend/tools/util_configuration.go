@@ -57,7 +57,7 @@ var (
 	STORAGE_DISK_PERMISSIONS    = EnvNumber("STORAGE_DISK_PERMISSIONS", 2760)
 	STORAGE_S3_KEY_SECRET       = EnvString("STORAGE_S3_KEY_SECRET", "xyz")
 	STORAGE_S3_KEY_ACCESS       = EnvString("STORAGE_S3_KEY_ACCESS", "123")
-	STORAGE_S3_ENDPOINT         = EnvString("STORAGE_S3_ENDPOINT", "bucket.s3.region.host.tld")
+	STORAGE_S3_ENDPOINT         = EnvString("STORAGE_S3_ENDPOINT", "https://bucket.s3.region.host.tld")
 	STORAGE_S3_REGION           = EnvString("STORAGE_S3_REGION", "region")
 	STORAGE_S3_BUCKET           = EnvString("STORAGE_S3_BUCKET", "bucket")
 	RATELIMIT_PROVIDER          = EnvString("RATELIMIT_PROVIDER", "local")
