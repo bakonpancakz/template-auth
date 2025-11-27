@@ -80,10 +80,15 @@ func SetupMux() *http.ServeMux {
 			Period: time.Minute,
 			Limit:  10,
 		})
-		rateClientImage = tools.NewRatelimit(&tools.RatelimitOptions{
-			Bucket: "RATE_CLIENT_IMAGE",
+		rateImageWrite = tools.NewRatelimit(&tools.RatelimitOptions{
+			Bucket: "RATE_IMAGE_WRITE",
 			Period: 5 * time.Minute,
 			Limit:  3,
+		})
+		rateImageRead = tools.NewRatelimit(&tools.RatelimitOptions{
+			Bucket: "RATE_IMAGE_READ",
+			Period: time.Minute,
+			Limit:  100,
 		})
 		rateServerWrite = tools.NewRatelimit(&tools.RatelimitOptions{
 			Bucket: "RATE_SERVER_WRITE",
@@ -132,11 +137,11 @@ func SetupMux() *http.ServeMux {
 		http.MethodDelete: tools.Chain(routes.DELETE_Users_Me, rateClientWrite, session),
 	})
 	mux.Handle("/users/@me/avatar", tools.MethodHandler{
-		http.MethodPut:    tools.Chain(routes.PUT_Users_Me_Avatar, rateClientImage, limitFILE, session),
+		http.MethodPut:    tools.Chain(routes.PUT_Users_Me_Avatar, rateImageWrite, limitFILE, session),
 		http.MethodDelete: tools.Chain(routes.DELETE_Users_Me_Avatar, rateClientWrite, session),
 	})
 	mux.Handle("/users/@me/banner", tools.MethodHandler{
-		http.MethodPut:    tools.Chain(routes.PUT_Users_Me_Banner, rateClientImage, limitFILE, session),
+		http.MethodPut:    tools.Chain(routes.PUT_Users_Me_Banner, rateImageWrite, limitFILE, session),
 		http.MethodDelete: tools.Chain(routes.DELETE_Users_Me_Banner, rateClientWrite, session),
 	})
 
@@ -150,7 +155,7 @@ func SetupMux() *http.ServeMux {
 		http.MethodDelete: tools.Chain(routes.DELETE_Users_Me_Applications_ID, rateClientWrite, session),
 	})
 	mux.Handle("/users/@me/applications/{id}/icon", tools.MethodHandler{
-		http.MethodPut:    tools.Chain(routes.PUT_Users_Me_Applications_ID_Icon, rateClientImage, limitFILE, session),
+		http.MethodPut:    tools.Chain(routes.PUT_Users_Me_Applications_ID_Icon, rateImageWrite, limitFILE, session),
 		http.MethodDelete: tools.Chain(routes.DELETE_Users_Me_Applications_ID_Icon, rateClientWrite, session),
 	})
 	mux.Handle("/users/@me/applications/{id}/reset", tools.MethodHandler{
@@ -195,6 +200,13 @@ func SetupMux() *http.ServeMux {
 		http.MethodPost:  tools.Chain(routes.POST_Users_Me_Security_Email, rateClientWrite, session),
 		http.MethodPatch: tools.Chain(routes.PATCH_Users_Me_Security_Email, rateClientWrite, limitJSON, session),
 	})
+
+	// Image Endpoints
+	if tools.HTTP_SERVE_IMAGES {
+		mux.Handle("/images/{category}/{id}/{hash}/{filename}", tools.MethodHandler{
+			http.MethodGet: tools.Chain(routes.GET_Images_Category_ID_Hash_Filename, rateImageRead),
+		})
+	}
 
 	// Default 404 Handler
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

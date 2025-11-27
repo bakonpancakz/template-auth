@@ -31,6 +31,7 @@ type imageFormat struct {
 }
 
 var (
+	ImageContentType    = "image/jpeg"
 	ErrImageMalformed   = errors.New("malformed image data")
 	ErrImageUnsupported = errors.New("unsupported image format")
 	ImageOptionsIcons   = imageOptions{
@@ -53,6 +54,11 @@ var (
 			{Name: "md.jpeg", Height: 200, Width: 600},
 			{Name: "sm.jpeg", Height: 100, Width: 300},
 		},
+	}
+	ImageOptions = map[string]imageOptions{
+		ImageOptionsIcons.Folder:   ImageOptionsIcons,
+		ImageOptionsAvatars.Folder: ImageOptionsAvatars,
+		ImageOptionsBanners.Folder: ImageOptionsBanners,
 	}
 )
 
@@ -151,7 +157,7 @@ func ImageProcessor(o imageOptions, id int64, d []byte) (string, error) {
 		if err := jpeg.Encode(&output, cropped, &jpeg.Options{Quality: 100}); err != nil {
 			return imageHash, err
 		}
-		if err := Storage.Put(path, "image/jpeg", output.Bytes()); err != nil {
+		if err := Storage.Put(path, ImageContentType, output.Bytes()); err != nil {
 			return imageHash, err
 		}
 	}

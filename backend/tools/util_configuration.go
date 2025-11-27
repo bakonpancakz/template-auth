@@ -68,6 +68,7 @@ var (
 	RATELIMIT_REDIS_TLS_CA      = EnvString("RATELIMIT_REDIS_TLS_CA", "tls_ca.pem")
 	LOGGER_PROVIDER             = EnvString("LOGGER_PROVIDER", "console")
 	HTTP_ADDRESS                = EnvString("HTTP_ADDRESS", "localhost:8080")
+	HTTP_SERVE_IMAGES           = EnvString("HTTP_SERVE_IMAGES", "true") == "true"
 	HTTP_COOKIE_NAME            = EnvString("HTTP_COOKIE_NAME", "session")
 	HTTP_COOKIE_DOMAIN          = EnvString("HTTP_COOKIE_DOMAIN", "")
 	HTTP_COOKIE_SECURE          = EnvString("HTTP_COOKIE_SECURE", "false") == "true"

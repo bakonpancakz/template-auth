@@ -2,7 +2,9 @@ package tools
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"strings"
@@ -25,6 +27,18 @@ func (o *storageProviderDisk) Start(stop context.Context, await *sync.WaitGroup)
 func (o *storageProviderDisk) Put(key, contentType string, data []byte) error {
 	full := path.Join(o.Base, path.Clean(key))
 	return os.WriteFile(full, data, o.Mode)
+}
+
+func (o *storageProviderDisk) Get(key string) (io.Reader, error) {
+	full := path.Join(o.Base, path.Clean(key))
+	f, err := os.Open(full)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, ErrStorageFileNotFound
+		}
+		return nil, err
+	}
+	return f, nil
 }
 
 func (o *storageProviderDisk) Delete(keys ...string) error {

@@ -2,6 +2,8 @@ package tools
 
 import (
 	"context"
+	"errors"
+	"io"
 	"sync"
 	"testing"
 	"time"
@@ -10,10 +12,16 @@ import (
 type StorageProvider interface {
 	Start(stop context.Context, await *sync.WaitGroup) error
 	Put(key, contentType string, data []byte) error
+	Get(key string) (io.Reader, error)
 	Delete(keys ...string) error
 }
 
 var Storage StorageProvider
+
+var (
+	ErrStorageFileNotFound    = errors.New("file not found")
+	ErrStorageInvalidFilename = errors.New("filename contains invalid characters")
+)
 
 func SetupStorageProvider(stop context.Context, await *sync.WaitGroup) {
 	t := time.Now()
@@ -29,7 +37,8 @@ func SetupStorageProvider(stop context.Context, await *sync.WaitGroup) {
 		if !testing.Testing() {
 			LoggerStorage.Fatal("Attempt to use testing provider outside of testing", nil)
 		}
-		Storage = &storageProviderNone{}
+		STORAGE_DISK_DIRECTORY = "images"
+		Storage = &storageProviderDisk{}
 	default:
 		LoggerStorage.Fatal("Unknown Provider", STORAGE_PROVIDER)
 	}

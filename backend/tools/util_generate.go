@@ -11,11 +11,14 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"regexp"
 	"strings"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
+
+var regexHashMD5 = regexp.MustCompile("[a-f0-9]{32}")
 
 // Picks a Random Number between 0-999999 for One-Time Passcodes
 func GeneratePasscode() string {
@@ -112,6 +115,11 @@ func CompareStringConstant(a, b string) bool {
 // Generate Standard Hash for an Image
 func GenerateImageHash(image []byte) string {
 	return fmt.Sprintf("%x", md5.Sum(image))
+}
+
+// Compare Standard Hash for an Image
+func CompareImageHash(hash string) bool {
+	return regexHashMD5.MatchString(hash)
 }
 
 // Generate Plaintext and Hashed Versions of a Application Secret

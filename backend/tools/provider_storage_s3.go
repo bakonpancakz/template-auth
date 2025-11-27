@@ -80,6 +80,32 @@ func (o *storageProviderS3) Put(key, contentType string, data []byte) error {
 	return nil
 }
 
+func (o *storageProviderS3) Get(key string) (io.Reader, error) {
+
+	// Generate Request
+	url := fmt.Sprint("https://", o.Endpoint, "/", key)
+	req, err := http.NewRequest(http.MethodPut, url, http.NoBody)
+	if err != nil {
+		return nil, err
+	}
+	AmazonSignRequestV4(req, []byte{}, o.AccessKey, o.SecretKey, o.Host, o.Region, "s3")
+
+	// Send Request
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if res.StatusCode == 404 {
+		return nil, ErrStorageFileNotFound
+	}
+	if res.StatusCode < 200 || res.StatusCode > 299 {
+		body, _ := io.ReadAll(res.Body)
+		return nil, fmt.Errorf("get failed: %d: %s", res.StatusCode, string(body))
+	}
+
+	return res.Body, nil
+}
+
 func (o *storageProviderS3) Delete(keys ...string) error {
 
 	// Generate Body

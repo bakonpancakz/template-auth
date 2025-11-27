@@ -120,50 +120,51 @@ schema applied.
 The backend is configured exclusively via **environment variables**.
 The table below includes all configurable values:
 
-| Variable                    | Description                                                                                      |
-| --------------------------- | ------------------------------------------------------------------------------------------------ |
-| MACHINE_ID                  | Machine ID for Snowflake generation, value must be less than `1024`                              |
-| DATABASE_URL                | The URI of the PostgreSQL instance                                                               |
-| DATABASE_TLS_ENABLED        | Enable TLS? Set value to `true` to enable                                                        |
-| DATABASE_TLS_CERT           | Path to SSL Certificate                                                                          |
-| DATABASE_TLS_KEY            | Path to SSL Key                                                                                  |
-| DATABASE_TLS_CA             | Path to SSL Certificate Bundle                                                                   |
-| EMAIL_PROVIDER              | Email Provider to use, allowed values are: `ses`, `emailengine`, `none`                          |
-| EMAIL_SENDER_NAME           | Displayname to send emails as `(e.g. noreply)`                                                   |
-| EMAIL_SENDER_ADDRESS        | Address to send emails as `(e.g. noreply@example.org)`                                           |
-| EMAIL_DEFAULT_DISPLAYNAME   | Displayname to use by when the actual value couldn't be fetched, defaults to `User`              |
-| EMAIL_DEFAULT_HOST          | The base URL to where the frontend is hosted `(e.g. https://example.org)`                        |
-| EMAIL_ENGINE_URL            | The URL to the [EmailEngine](https://github.com/bakonpancakz/emailengine) instance               |
-| EMAIL_ENGINE_KEY            | The Key to the [EmailEngine](https://github.com/bakonpancakz/emailengine) instance               |
-| EMAIL_SES_ACCESS_KEY        | The Access Key for requests to SES                                                               |
-| EMAIL_SES_SECRET_KEY        | The Secret Key for requests to SES                                                               |
-| EMAIL_SES_REGION            | The Region for Requests to SES                                                                   |
-| EMAIL_SES_CONFIGURATION_SET | The Configuration Set to use for SES                                                             |
-| STORAGE_PROVIDER            | Storage Provider to use, allowed values are: `s3`, `disk`, `none`                                |
-| STORAGE_DISK_DIRECTORY      | The directory to store user content, defaults to `data`                                          |
-| STORAGE_DISK_PERMISSIONS    | The default permissions for creating a file, defaults to `2760`                                  |
-| STORAGE_S3_KEY_SECRET_KEY   | The Access Key for requests to S3                                                                |
-| STORAGE_S3_KEY_ACCESS_KEY   | The Secret Key for requests to S3                                                                |
-| STORAGE_S3_ENDPOINT         | The Endpoint to S3 API `(e.g. https://bucket.s3.region.host.tld)`                                |
-| STORAGE_S3_REGION           | The Region for requests to S3                                                                    |
-| STORAGE_S3_BUCKET           | The Bucket for requests to S3                                                                    |
-| RATELIMIT_PROVIDER          | Ratelimit Provider to use, allowed values are `redis`, `local`, `none`                           |
-| RATELIMIT_REDIS_URI         | The URI to the Redis Database Instance                                                           |
-| RATELIMIT_REDIS_TLS_ENABLED | Enable TLS? Set value to `true` to enable                                                        |
-| RATELIMIT_REDIS_TLS_CERT    | Path to SSL Certificate                                                                          |
-| RATELIMIT_REDIS_TLS_KEY     | Path to SSL Key                                                                                  |
-| RATELIMIT_REDIS_TLS_CA      | Path to SSL Certificate Bundle                                                                   |
-| LOGGER_PROVIDER             | Logger Provider to use, allowed values are `console`                                             |
-| HTTP_ADDRESS                | Address to listen to HTTP Requests on                                                            |
-| HTTP_COOKIE_NAME            | Name for session cookies                                                                         |
-| HTTP_COOKIE_DOMAIN          | Domain to use for cookies                                                                        |
-| HTTP_COOKIE_SECURE          | Require HTTPS for cookies? Set value to `true` to enable                                         |
-| HTTP_CORS_ORIGINS           | Allowed origins for CORS headers delimited with commas, defaults to `http://localhost:8080`      |
-| HTTP_IP_HEADERS             | Trusted headers from reverse proxy delimited with commas, defaults to `X-Forwarded-By`           |
-| HTTP_IP_PROXIES             | Trusted reverse proxy ranges in CIDR notation, defaults to `127.0.0.1/8`                         |
-| HTTP_KEY                    | They key to use for signed strings, do not expose. Will cause server to exit in production mode. |
-| HTTP_SERVER_TOKEN           | Disable branding via inclusio of server header, change value from `true` to disable              |
-| HTTP_TLS_ENABLED            | Enable TLS? Set value to `true` to enable                                                        |
-| HTTP_TLS_CERT               | Path to SSL Certificate                                                                          |
-| HTTP_TLS_KEY                | Path to SSL Key                                                                                  |
-| HTTP_TLS_CA                 | Path to SSL Certificate Bundle                                                                   |
+| Variable                    | Description                                                                                                     |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| MACHINE_ID                  | Machine ID for Snowflake generation, value must be less than `1024`                                             |
+| DATABASE_URL                | The URI of the PostgreSQL instance                                                                              |
+| DATABASE_TLS_ENABLED        | Enable TLS? Set value to `true` to enable                                                                       |
+| DATABASE_TLS_CERT           | Path to SSL Certificate                                                                                         |
+| DATABASE_TLS_KEY            | Path to SSL Key                                                                                                 |
+| DATABASE_TLS_CA             | Path to SSL Certificate Bundle                                                                                  |
+| EMAIL_PROVIDER              | Email Provider to use, allowed values are: `ses`, `emailengine`, `none`                                         |
+| EMAIL_SENDER_NAME           | Displayname to send emails as `(e.g. noreply)`                                                                  |
+| EMAIL_SENDER_ADDRESS        | Address to send emails as `(e.g. noreply@example.org)`                                                          |
+| EMAIL_DEFAULT_DISPLAYNAME   | Displayname to use by when the actual value couldn't be fetched, defaults to `User`                             |
+| EMAIL_DEFAULT_HOST          | The base URL to where the frontend is hosted `(e.g. https://example.org)`                                       |
+| EMAIL_ENGINE_URL            | The URL to the [EmailEngine](https://github.com/bakonpancakz/emailengine) instance                              |
+| EMAIL_ENGINE_KEY            | The Key to the [EmailEngine](https://github.com/bakonpancakz/emailengine) instance                              |
+| EMAIL_SES_ACCESS_KEY        | The Access Key for requests to SES                                                                              |
+| EMAIL_SES_SECRET_KEY        | The Secret Key for requests to SES                                                                              |
+| EMAIL_SES_REGION            | The Region for Requests to SES                                                                                  |
+| EMAIL_SES_CONFIGURATION_SET | The Configuration Set to use for SES                                                                            |
+| STORAGE_PROVIDER            | Storage Provider to use, allowed values are: `s3`, `disk`, `none`                                               |
+| STORAGE_DISK_DIRECTORY      | The directory to store user content, defaults to `data`                                                         |
+| STORAGE_DISK_PERMISSIONS    | The default permissions for creating a file, defaults to `2760`                                                 |
+| STORAGE_S3_KEY_SECRET_KEY   | The Access Key for requests to S3                                                                               |
+| STORAGE_S3_KEY_ACCESS_KEY   | The Secret Key for requests to S3                                                                               |
+| STORAGE_S3_ENDPOINT         | The Endpoint to S3 API `(e.g. https://bucket.s3.region.host.tld)`                                               |
+| STORAGE_S3_REGION           | The Region for requests to S3                                                                                   |
+| STORAGE_S3_BUCKET           | The Bucket for requests to S3                                                                                   |
+| RATELIMIT_PROVIDER          | Ratelimit Provider to use, allowed values are `redis`, `local`, `none`                                          |
+| RATELIMIT_REDIS_URI         | The URI to the Redis Database Instance                                                                          |
+| RATELIMIT_REDIS_TLS_ENABLED | Enable TLS? Set value to `true` to enable                                                                       |
+| RATELIMIT_REDIS_TLS_CERT    | Path to SSL Certificate                                                                                         |
+| RATELIMIT_REDIS_TLS_KEY     | Path to SSL Key                                                                                                 |
+| RATELIMIT_REDIS_TLS_CA      | Path to SSL Certificate Bundle                                                                                  |
+| LOGGER_PROVIDER             | Logger Provider to use, allowed values are `console`                                                            |
+| HTTP_ADDRESS                | Address to listen to HTTP Requests on                                                                           |
+| HTTP_SERVE_IMAGES           | Enable Image Endpoints (e.g. `/images/{category}}/{id}/{hash}/{size}.jpg`), change value from `true` to disable |
+| HTTP_COOKIE_NAME            | Name for session cookies                                                                                        |
+| HTTP_COOKIE_DOMAIN          | Domain to use for cookies                                                                                       |
+| HTTP_COOKIE_SECURE          | Require HTTPS for cookies? Set value to `true` to enable                                                        |
+| HTTP_CORS_ORIGINS           | Allowed origins for CORS headers delimited with commas, defaults to `http://localhost:8080`                     |
+| HTTP_IP_HEADERS             | Trusted headers from reverse proxy delimited with commas, defaults to `X-Forwarded-By`                          |
+| HTTP_IP_PROXIES             | Trusted reverse proxy ranges in CIDR notation, defaults to `127.0.0.1/8`                                        |
+| HTTP_KEY                    | They key to use for signed strings, do not expose. Will cause server to exit in production mode.                |
+| HTTP_SERVER_TOKEN           | Disable branding via inclusio of server header, change value from `true` to disable                             |
+| HTTP_TLS_ENABLED            | Enable TLS? Set value to `true` to enable                                                                       |
+| HTTP_TLS_CERT               | Path to SSL Certificate                                                                                         |
+| HTTP_TLS_KEY                | Path to SSL Key                                                                                                 |
+| HTTP_TLS_CA                 | Path to SSL Certificate Bundle                                                                                  |
