@@ -30,8 +30,8 @@ func (e *storageProviderS3) Start(stop context.Context, await *sync.WaitGroup) e
 	if err != nil {
 		return fmt.Errorf("invalid s3 endpoint url; %s", err)
 	}
-	e.AccessKey = STORAGE_S3_KEY_ACCESS_KEY
-	e.SecretKey = STORAGE_S3_KEY_SECRET_KEY
+	e.AccessKey = STORAGE_S3_KEY_ACCESS
+	e.SecretKey = STORAGE_S3_KEY_SECRET
 	e.Endpoint = STORAGE_S3_ENDPOINT
 	e.Region = STORAGE_S3_REGION
 	e.Bucket = STORAGE_S3_BUCKET

@@ -142,8 +142,8 @@ The table below includes all configurable values:
 | STORAGE_PROVIDER            | Storage Provider to use, allowed values are: `s3`, `disk`, `none`                                               |
 | STORAGE_DISK_DIRECTORY      | The directory to store user content, defaults to `data`                                                         |
 | STORAGE_DISK_PERMISSIONS    | The default permissions for creating a file, defaults to `2760`                                                 |
-| STORAGE_S3_KEY_SECRET_KEY   | The Access Key for requests to S3                                                                               |
-| STORAGE_S3_KEY_ACCESS_KEY   | The Secret Key for requests to S3                                                                               |
+| STORAGE_S3_KEY_SECRET       | The Access Key for requests to S3                                                                               |
+| STORAGE_S3_KEY_ACCESS       | The Secret Key for requests to S3                                                                               |
 | STORAGE_S3_ENDPOINT         | The Endpoint to S3 API `(e.g. https://bucket.s3.region.host.tld)`                                               |
 | STORAGE_S3_REGION           | The Region for requests to S3                                                                                   |
 | STORAGE_S3_BUCKET           | The Bucket for requests to S3                                                                                   |
