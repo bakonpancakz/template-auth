@@ -12,6 +12,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/bakonpancakz/template-auth/tools"
 )
 
 func NewTestRequest(t *testing.T, method, format string, arg ...any) *testRequest {
@@ -226,5 +228,28 @@ func (t *testRequest) ExpectInteger(key string, expected int64) *testRequest {
 	default:
 		t.test.Fatalf("field '%s' expected number, got %T\nBody: %s", key, v, t.responseBody)
 	}
+	return t
+}
+
+// Expect a JSON body to match against the given struct
+func (t *testRequest) ExpectStruct(match any) *testRequest {
+
+	t.ExpectBody()
+	if err := json.Unmarshal(t.responseBody, match); err != nil {
+		t.test.Fatalf("unmarshal error : %s", err)
+	}
+
+	verrs, err := tools.ValidateStruct(match)
+	if err != nil {
+		t.test.Fatalf("validation failed: %s", err)
+	}
+	if len(verrs) > 0 {
+		lines := make([]string, len(verrs))
+		for i, err := range verrs {
+			lines[i] = fmt.Sprintf("- %s: %s", err.Field, err.Error)
+		}
+		t.test.Fatalf("validation errors:\n%s", strings.Join(lines, "\n"))
+	}
+
 	return t
 }

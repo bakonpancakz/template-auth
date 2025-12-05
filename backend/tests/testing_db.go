@@ -60,6 +60,12 @@ var RESET_SESSION_REVOKED = DatabaseResetOption{
 	Arguments: []any{TEST_ID_PRIMARY, TEST_ID_PRIMARY},
 }
 
+// Update Default Session as Elevated
+var RESET_SESSION_ELEVATED = DatabaseResetOption{
+	Query:     `UPDATE auth.sessions SET elevated_until = $1 WHERE id = $2 AND user_id = $3`,
+	Arguments: []any{TEST_TOKEN_EXPIRES_FUTURE.Unix(), TEST_ID_PRIMARY, TEST_ID_PRIMARY},
+}
+
 // Create Default Application
 var RESET_APPLICATION = DatabaseResetOption{
 	Query:     `INSERT INTO auth.applications (id, user_id, name, auth_secret) VALUES ($1, $2, $3, $4)`,

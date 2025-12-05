@@ -29,7 +29,7 @@ func DELETE_Users_Me_Connections_ID(w http.ResponseWriter, r *http.Request) {
 		`UPDATE auth.connections SET
 			updated = CURRENT_TIMESTAMP,
 			revoked = TRUE
-		WHERE id = $1 AND user_id = $2`,
+		WHERE id = $1 AND user_id = $2 AND revoked = FALSE`,
 		snowflake,
 		session.UserID,
 	)
